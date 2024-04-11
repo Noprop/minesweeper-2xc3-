@@ -76,4 +76,43 @@ def graphGenerator(num_graphs: int, size: int, min_edges: int, max_edges: int) -
     return graphs
 
 graphs = graphGenerator(2, 7, 3, 20)
-graphs[0].display_graph()
+# graphs[0].display_graph()
+
+static_graph = WeightedGraph(7)
+static_graph.add_edge(1, 0, 6)
+static_graph.add_edge(1, 5, 2)
+static_graph.add_edge(1, 3, 3)
+static_graph.add_edge(1, 6, 4)
+static_graph.add_edge(1, 4, 4)
+static_graph.add_edge(2, 6, 7)
+static_graph.add_edge(4, 0, 2)
+static_graph.add_edge(4, 2, 5)
+static_graph.add_edge(4, 5, 6)
+static_graph.add_edge(5, 2, -6)
+static_graph.add_edge(5, 6, 4)
+static_graph.display_graph()
+
+
+def bellmanFord(g: WeightedGraph, s: int, k: int):
+    n = g.get_number_of_nodes()
+    dist = [float('inf') for _ in range(n)]
+    prev = [None for _ in range(n)]
+    relax = [k for _ in range(n)]
+    dist[s] = 0
+    prev[s] = s
+
+    # v-1 max iterations
+    for _ in range(n-1):
+        for node in range(n):
+            for nb in g.get_neighbors(node):
+                if (relax[nb]) == 0:
+                    continue
+                weight = g.get_weights(node, nb)
+                if (dist[node] + weight) < dist[nb]:
+                    relax[nb] -= 1
+                    dist[nb] = dist[node] + weight
+                    prev[nb] = node
+
+    return (dist, prev)
+
+bellmanFord(static_graph, 1, 1)
