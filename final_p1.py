@@ -370,12 +370,6 @@ def dijkstra_relaxes(Graph,source,k):
         
     return dp
 
-
-
-
-    print(bellmanFord_relaxes(graph, 0, 6))
-    print(dijkstra_relaxes(graph, 0, 6))
-
 def experiment1():
     runs = 50
     sizes = [5,10,15,20]
@@ -498,9 +492,9 @@ def experiment3():
     plt.legend()
     plt.show()
 
-experiment3()
+# experiment3()
 
-def heuristic(n: int) -> int:
+def heuristic(source: int, n: int) -> int:
     # hardcoded
     heuristic_dict = {
         0: 0.0,
@@ -535,7 +529,7 @@ def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
 
     prev[source] = source
     gScore[source] = 0
-    fScore[source] = h(source)
+    fScore[source] = h(source, source)
 
     while not Q.is_empty():
         current = Q.extract_min().value
@@ -547,7 +541,7 @@ def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
             if temp_gScore < gScore[nb]:
                 prev[nb] = current
                 gScore[nb] = temp_gScore
-                fScore[nb] = temp_gScore + h(nb)
+                fScore[nb] = temp_gScore + h(source, nb)
                 if Q.contains(nb):
                     Q.decrease_key(nb, fScore[nb])
                 else:
@@ -600,8 +594,6 @@ class Dijkstra_AStar_Analysis:
         self.distances = {}
         for sid1 in self.stations:
             for sid2 in self.stations:
-                if sid1 == sid2:
-                    continue
                 s1 = self.stations[sid1]
                 s2 = self.stations[sid2]
 
@@ -617,7 +609,7 @@ class Dijkstra_AStar_Analysis:
                     self.distances[sid1] = {
                         sid2: distance
                     }
-        
+
     def heuristic(self, s1, s2):
         return self.distances[s1][s2]
 
@@ -627,10 +619,75 @@ class Dijkstra_AStar_Analysis:
             distance = self.heuristic(edge["s1"], edge["s2"])
             self.graph.add_edge(edge["s1"], edge["s2"], distance)
             self.graph.add_edge(edge["s2"], edge["s1"], distance)
+    
+    def run_experiments(self, length="short"):
+        print(self.stations[302])
+        dijkstra_speed = []
+        astar_speed = []
+
+        station_ids = list(self.stations.keys())
+        station_ids.sort()
+
+        if length == "short":
+            station_ids = station_ids[:12]
+
+        # for every station, check the path to every other station
+        for s1 in station_ids:
+            dspeed = []
+            aspeed = []
+
+            # test the time to find every other station from s1
+            for s2 in self.stations:
+                if s1 == s2:
+                    continue
+
+                # test dijkstra
+                start1 = timeit.default_timer()
+                dijkstra(self.graph, s1, s2)
+                stop1 = timeit.default_timer()
+                dspeed.append(stop1-start1)
+
+                # test astar
+                start2 = timeit.default_timer()
+                AStar(self.graph, s1, s2, self.heuristic)
+                stop2 = timeit.default_timer()
+                aspeed.append(stop2-start2)
+
+            print('adding: ', s1)
+            dijkstra_speed.append(sum(dspeed))
+            astar_speed.append(sum(aspeed))
+
+        # print(dijkstra_speed)
+        # print(astar_speed)
+
+        # to avoid 600+ bars we will aggregate at a max size of 20 stations
+        num_bins = min(12, len(dijkstra_speed))
+        bin_size = len(dijkstra_speed) // num_bins
+
+        # sum the items 1-20, 21-40, 41-60, etc.
+        binned_dijkstra_speed = [sum(dijkstra_speed[i*bin_size:(i+1)*bin_size]) for i in range(num_bins)]
+        binned_astar_speed = [sum(astar_speed[i*bin_size:(i+1)*bin_size]) for i in range(num_bins)]
+
+        # configure and display the plot
+        plt.figure(figsize=(10, 5))
+        x_axis = np.arange(num_bins)
+        if len(dijkstra_speed) <= num_bins:
+            plt.xticks(x_axis, [str(i+1) for i in range(num_bins)])
+            plt.xlabel("Stations IDs")
+        else:
+            plt.xticks(x_axis, [str((i*bin_size+1) + 1) + '-' + str(((i+1)*bin_size) + 1) for i in range(num_bins)])
+            plt.xlabel("Group of Stations (IDs)")
+
+        plt.bar(x_axis - 0.2, binned_dijkstra_speed, 0.4, color='#b33300', label='Dijkstra')
+        plt.bar(x_axis + 0.2, binned_astar_speed, 0.4, color='#8bc1c7', label='A*')
+
+        plt.title("Time comparison for Dijkstra vs A* on the London Subway")
+        plt.ylabel("Time (s)")
+        plt.legend()
+        plt.show()
+
 
 london_subway = Dijkstra_AStar_Analysis()
 london_subway.create_graph()
-
-
-
+london_subway.run_experiments("short")
 
