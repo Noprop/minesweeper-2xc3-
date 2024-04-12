@@ -6,6 +6,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import csv
 
 class MinHeap:
     def __init__(self, data):
@@ -125,7 +126,7 @@ class Item:
     
     def __str__(self):
         return "(" + str(self.key) + "," + str(self.value) + ")"
-        
+    
 class WeightedGraph:
     def __init__(self,nodes):
         self.graph=[]
@@ -553,7 +554,83 @@ def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
                     Q.insert(Item(nb, fScore[nb]))
     return None
     
-
+def get_path(start, end, pred):
+    path = [start]
+    node = start
+    while node != end:
+        node = pred[node]
+        path.append(node)
+    path.reverse()
+    return path
 
 # print(AStar(static_graph_positive, 1, 2, heuristic))
 # static_graph_positive.display_graph()
+
+# Part 4
+
+class Dijkstra_AStar_Analysis:
+    def __init__(self):
+        self.stations = {}
+        self.connections = []
+
+        with open('london_stations.csv', newline='') as file1:
+            reader1 = csv.reader(file1)
+            next(reader1)
+            for row in reader1:
+                self.stations[int(row[0])-1] = {
+                    "name": row[3],
+                    "lat": float(row[1]),
+                    "long": float(row[2]),
+                    "zone": row[5],
+                    "total_lines": row[6],
+                    "rail": row[7],
+                }
+
+        with open('london_connections.csv', newline='') as file2:
+            reader2 = csv.reader(file2)
+            next(reader2)
+            for row in reader2:
+                self.connections.append({
+                    "s1": int(row[0])-1,
+                    "s2": int(row[1])-1,
+                    "line": row[2],
+                    "time": row[3]
+                })
+
+        self.distances = {}
+        for sid1 in self.stations:
+            for sid2 in self.stations:
+                if sid1 == sid2:
+                    continue
+                s1 = self.stations[sid1]
+                s2 = self.stations[sid2]
+
+                lat1 = s1["lat"]
+                lon1 = s1["long"]
+                lat2 = s2["lat"]
+                lon2 = s2["long"]
+                distance = math.sqrt((lat2 - lat1)**2 + (lon2 - lon1)**2)
+
+                if sid1 in self.distances:
+                    self.distances[sid1][sid2] = distance
+                else:
+                    self.distances[sid1] = {
+                        sid2: distance
+                    }
+        
+    def heuristic(self, s1, s2):
+        return self.distances[s1][s2]
+
+    def create_graph(self):
+        self.graph = WeightedGraph(len(self.stations)+1)
+        for edge in self.connections:
+            distance = self.heuristic(edge["s1"], edge["s2"])
+            self.graph.add_edge(edge["s1"], edge["s2"], distance)
+            self.graph.add_edge(edge["s2"], edge["s1"], distance)
+
+london_subway = Dijkstra_AStar_Analysis()
+london_subway.create_graph()
+
+
+
+
