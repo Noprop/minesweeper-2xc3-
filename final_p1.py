@@ -74,8 +74,7 @@ def graphGenerator(num_graphs: int, size: int, min_edges: int, max_edges: int) -
         graphs.append(graph)
     return graphs
 
-graphs = graphGenerator(2, 7, 3, 20)
-# graphs[0].display_graph()
+graphs = graphGenerator(2, 7, 3, 20) # list length 2
 
 static_graph = WeightedGraph(7)
 static_graph.add_edge(1, 0, 6)
@@ -104,7 +103,25 @@ static_graph_positive.add_edge(5, 2, 6)
 static_graph_positive.add_edge(5, 6, 4)
 
 
-def bellmanFord(g: WeightedGraph, s: int, k: int):
+def bellmanFord(g: WeightedGraph, s: int):
+    n = g.get_number_of_nodes()
+    dist = [float('inf') for _ in range(n)]
+    prev = [None for _ in range(n)]
+    dist[s] = 0
+    prev[s] = s
+
+    # v-1 max iterations
+    for _ in range(n-1):
+        for node in range(n):
+            for nb in g.get_neighbors(node):
+                weight = g.get_weights(node, nb)
+                if (dist[node] + weight) < dist[nb]:
+                    dist[nb] = dist[node] + weight
+                    prev[nb] = node
+
+    return (dist, prev)
+
+def bellmanFord_relaxes(g: WeightedGraph, s: int, k: int):
     n = g.get_number_of_nodes()
     dist = [float('inf') for _ in range(n)]
     prev = [None for _ in range(n)]
@@ -126,10 +143,7 @@ def bellmanFord(g: WeightedGraph, s: int, k: int):
 
     return (dist, prev)
 
-bellmanFord(static_graph, 1, 10)
-
 def dijkstra(Graph,source,destination):
-
     visited = {}
     distance = {}
 
@@ -143,8 +157,6 @@ def dijkstra(Graph,source,destination):
 
         # insert the nodes in the minheap
         Q.insert(Item(i, float("inf")))
-
-    print(Q)
 
     # assign 0 to source 
     Q.decrease_key(source, 0)
@@ -169,6 +181,121 @@ def dijkstra(Graph,source,destination):
 
     return distance[destination]
 
+def dijkstra_relaxes(Graph,source,k):
+    visited = {}
+    distance = {}
+    path = {}
+    relaxed = {}
+    
+    # create empty queue
+    Q = MinHeap([])
+
+    for i in range(Graph.get_number_of_nodes()):
+
+        visited[i] = False
+        distance[i] = float("inf")
+        relaxed[i] = k
+        path[i] = []
+
+        # insert the nodes in the minheap
+        Q.insert(Item(i, float("inf")))
+
+    # assign 0 to source 
+    Q.decrease_key(source, 0)
+    distance[source] = 0
+    path[source] = [source]
+
+    while not (Q.is_empty() ):
+        # get current node
+        current_node = Q.extract_min().value
+        visited[current_node] = True
+
+        for neighbour in Graph.graph[current_node]:
+            # get weight of current node
+            edge_weight = Graph.get_weights(current_node, neighbour)
+            temp = distance[current_node] + edge_weight
+
+            # not visited yet
+            if not visited[neighbour]:
+                if temp < distance[neighbour]:
+                    if relaxed[neighbour] > 0:
+                        path[neighbour] = path[current_node] + [neighbour]
+                        distance[neighbour] = temp
+                        Q.decrease_key(neighbour, temp)
+                        relaxed[neighbour] -= 1
+
+    dp = {}
+
+    for i in range(Graph.get_number_of_nodes()):
+        dp[i] = (distance[i], path[i])
+        
+    return dp
+
+def heuristic(n: int) -> int:
+    # hardcoded
+    heuristic_dict = {
+        0: 0.0,
+        1: 1.0,
+        2: -15.0,
+        3: 3.0,
+        4: -16.0,
+        5: 5.0,
+        6: 6.0,
+        7: 7.0,
+    }
+    return heuristic_dict[n]
+
+def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
+    n = g.get_number_of_nodes()
+
+    # init our pq, and add source to it
+    Q = MinHeap([])
+    Q.insert(Item(source, 0))
+
+    # we use this to backtrack and calculate the path
+    prev = {}
+    # this is the score not including the heuristic value
+    gScore = {}
+    # this is the score including the heuristic
+    # this is what determines which node to check next
+    fScore = {}
+    for i in range(n):
+        prev[i] = None
+        gScore[i] = float('inf')
+        fScore[i] = float('inf')
+
+    prev[source] = source
+    gScore[source] = 0
+    fScore[source] = h(source)
+
+    while not Q.is_empty():
+        current = Q.extract_min().value
+        if current == goal:
+            return  (prev, get_path(goal, source, prev))
+        
+        for nb in g.get_neighbors(current):
+            temp_gScore = gScore[current] + g.get_weights(current, nb)
+            if temp_gScore < gScore[nb]:
+                prev[nb] = current
+                gScore[nb] = temp_gScore
+                fScore[nb] = temp_gScore + h(nb)
+                if Q.contains(nb):
+                    Q.decrease_key(nb, fScore[nb])
+                else:
+                    Q.insert(Item(nb, fScore[nb]))
+    return None
+    
+def get_path(start, end, pred):
+    path = [start]
+    node = start
+    while node != end:
+        node = pred[node]
+        path.append(node)
+    path.reverse()
+    return path
+
+print(AStar(static_graph_positive, 1, 2, heuristic))
+static_graph_positive.display_graph()
 
 class MinHeap:
     def __init__(self, data):
@@ -289,69 +416,3 @@ class Item:
     def __str__(self):
         return "(" + str(self.key) + "," + str(self.value) + ")"
 
-
-def heuristic(n: int) -> int:
-    # hardcoded
-    heuristic_dict = {
-        0: 0.0,
-        1: 1.0,
-        2: -15.0,
-        3: 3.0,
-        4: -16.0,
-        5: 5.0,
-        6: 6.0,
-        7: 7.0,
-    }
-    return heuristic_dict[n]
-
-def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
-    n = g.get_number_of_nodes()
-
-    # init our pq, and add source to it
-    Q = MinHeap([])
-    Q.insert(Item(source, 0))
-
-    # we use this to backtrack and calculate the path
-    prev = {}
-    # this is the score not including the heuristic value
-    gScore = {}
-    # this is the score including the heuristic
-    # this is what determines which node to check next
-    fScore = {}
-    for i in range(n):
-        prev[i] = None
-        gScore[i] = float('inf')
-        fScore[i] = float('inf')
-
-    prev[source] = source
-    gScore[source] = 0
-    fScore[source] = h(source)
-
-    while not Q.is_empty():
-        current = Q.extract_min().value
-        if current == goal:
-            return  (prev, get_path(goal, source, prev))
-        
-        for nb in g.get_neighbors(current):
-            temp_gScore = gScore[current] + g.get_weights(current, nb)
-            if temp_gScore < gScore[nb]:
-                prev[nb] = current
-                gScore[nb] = temp_gScore
-                fScore[nb] = temp_gScore + h(nb)
-                if Q.contains(nb):
-                    Q.decrease_key(nb, fScore[nb])
-                else:
-                    Q.insert(Item(nb, fScore[nb]))
-    return None
-    
-def get_path(start, end, pred):
-    path = [start]
-    node = start
-    while node != end:
-        node = pred[node]
-        path.append(node)
-    path.reverse()
-    return path
-
-print(AStar(static_graph_positive, 1, 2, heuristic))
-static_graph_positive.display_graph()
