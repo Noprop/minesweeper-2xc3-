@@ -502,6 +502,80 @@ def experiment3():
 
 # experiment3()
 
+def all_pair_positive(Graph : WeightedGraph):
+    size = Graph.get_number_of_nodes()
+    nodes = [i for i in range(0,size)]
+    return_list = [{} for _ in nodes]
+
+    for source in nodes:
+        visited = {}
+        distance = {}
+        prev = {}
+        
+        # create empty queue
+        Q = MinHeap([])
+
+        for i in range(Graph.get_number_of_nodes()):
+
+            visited[i] = False
+            distance[i] = float("inf")
+            prev[i] = None
+
+            # insert the nodes in the minheap
+            Q.insert(Item(i, float("inf")))
+
+        # assign 0 to source 
+        Q.decrease_key(source, 0)
+        distance[source] = 0
+
+        while not (Q.is_empty() ):
+            # get current node
+            current_node = Q.extract_min().value
+            visited[current_node] = True
+
+            for neighbour in Graph.graph[current_node]:
+                # get weight of current node
+                edge_weight = Graph.get_weights(current_node, neighbour)
+                temp = distance[current_node] + edge_weight
+
+                # not visited yet
+                if not visited[neighbour]:
+                    if temp < distance[neighbour]:
+                        prev[neighbour] = current_node
+                        distance[neighbour] = temp
+                        Q.decrease_key(neighbour, temp)
+
+        for i in range(Graph.get_number_of_nodes()):
+            return_list[source][i] = (distance[i], prev[i])
+
+    return return_list
+
+def all_pair_negative(g : WeightedGraph):
+    size = g.get_number_of_nodes()
+    nodes = [i for i in range(0,size)]
+    return_list = [{} for _ in nodes]
+
+    for s in nodes:
+        n = g.get_number_of_nodes()
+        dist = [float('inf') for _ in range(n)]
+        prev = [None for _ in range(n)]
+        dist[s] = 0
+        prev[s] = s
+
+        # v-1 max iterations
+        for _ in range(n-1):
+            for node in range(n):
+                for nb in g.get_neighbors(node):
+                    weight = g.get_weights(node, nb)
+                    if (dist[node] + weight) < dist[nb]:
+                        dist[nb] = dist[node] + weight
+                        prev[nb] = node
+
+        for i in range(g.get_number_of_nodes()):
+            return_list[s][i] = (dist[i], prev[i])
+            
+    return return_list
+
 def heuristic(source: int, n: int) -> int:
     # hardcoded
     heuristic_dict = {
