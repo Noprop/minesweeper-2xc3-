@@ -534,8 +534,8 @@ def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
     while not Q.is_empty():
         current = Q.extract_min().value
         if current == goal:
-            return  (prev, get_path(goal, source, prev))
-        
+            return (prev, get_path(goal, source, prev))
+
         for nb in g.get_neighbors(current):
             temp_gScore = gScore[current] + g.get_weights(current, nb)
             if temp_gScore < gScore[nb]:
@@ -620,8 +620,7 @@ class Dijkstra_AStar_Analysis:
             self.graph.add_edge(edge["s1"], edge["s2"], distance)
             self.graph.add_edge(edge["s2"], edge["s1"], distance)
     
-    def run_experiments(self, length="short"):
-        print(self.stations[302])
+    def run_experiment1(self, length="short"):
         dijkstra_speed = []
         astar_speed = []
 
@@ -686,8 +685,62 @@ class Dijkstra_AStar_Analysis:
         plt.legend()
         plt.show()
 
+    def run_experiment2(self):
+        dspeed = []
+        aspeed = []
+
+        # bottom, left station 118: Heathrow Terminal 4
+        # top, right station 88: Epping
+        # top, right station 256: Theydon Bois (adjacent to Epping)
+        # top, right station 153: Leyton (10 stations away from Epping)
+        # center station 192: Oxford Circus
+
+        tests = [
+            [118 - 1, 88 - 1], # corner -> corner
+            [88 - 1, 118 - 1],
+            [88 - 1, 192 - 1], # corner -> center
+            [192 - 1, 88 - 1], # center -> corner
+            [149 - 1, 162 - 1], # adjacent
+            [162 - 1, 149 - 1],
+            [88 - 1, 153 - 1], # 10 stations away
+            [153 - 1, 88 - 1],
+        ]
+        for test in tests:
+            # test dijkstra
+            start1 = timeit.default_timer()
+            dijkstra(self.graph, test[0], test[1])
+            stop1 = timeit.default_timer()
+            dspeed.append((stop1-start1)/1000)
+
+            # test astar
+            start2 = timeit.default_timer()
+            AStar(self.graph, test[0], test[1], self.heuristic)
+            stop2 = timeit.default_timer()
+            aspeed.append((stop2-start2)/1000) 
+
+        # configure and display the plot
+        plt.figure(figsize=(10, 8))
+        x_axis = np.arange(len(dspeed))
+        plt.xticks(x_axis, [
+            "Corner to Corner", "Corner to Corner Reversed", 
+            "Corner to Center", "Center to Corner",
+            "Adjacent", "Adjacent Reversed",
+            "10 Stations Away", "10 Stations Away Reversed", 
+        ], rotation=45)
+        plt.xlabel("Test Conducted")
+
+        plt.bar(x_axis - 0.2, dspeed, 0.4, color='#b33300', label='Dijkstra')
+        plt.bar(x_axis + 0.2, aspeed, 0.4, color='#8bc1c7', label='A*')
+
+        plt.title("Time comparison for Dijkstra vs A* on the London Subway")
+        plt.ylabel("Time (ms)")
+        plt.tight_layout()
+        plt.legend()
+        plt.show()
+
 
 london_subway = Dijkstra_AStar_Analysis()
 london_subway.create_graph()
-london_subway.run_experiments("short")
+# london_subway.run_experiments("short")
+london_subway.run_experiment2()
 
