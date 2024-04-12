@@ -285,6 +285,7 @@ def bellmanFord_relaxes(g: WeightedGraph, s: int, k: int):
 def dijkstra(Graph,source,destination):
     visited = {}
     distance = {}
+    path = {}
 
     # create empty queue
     Q = MinHeap([])
@@ -293,6 +294,7 @@ def dijkstra(Graph,source,destination):
 
         visited[i] = False
         distance[i] = float("inf")
+        path[i] = []
 
         # insert the nodes in the minheap
         Q.insert(Item(i, float("inf")))
@@ -300,6 +302,7 @@ def dijkstra(Graph,source,destination):
     # assign 0 to source 
     Q.decrease_key(source, 0)
     distance[source] = 0
+    path[source] = [source]
 
     while not (Q.is_empty() or visited[destination]):
         # get current node
@@ -315,10 +318,15 @@ def dijkstra(Graph,source,destination):
             # not visited yet
             if not visited[neighbour]:
                 if temp < distance[neighbour]:
+                    path[neighbour] = path[current_node] + [neighbour]
                     distance[neighbour] = temp
                     Q.decrease_key(neighbour, temp)
 
-    return distance[destination]
+    return path[destination]
+    # if (distance[destination] < float('inf')):
+        # return get_path(destination, source, path)
+
+    # return distance[destination]
 
 def dijkstra_relaxes(Graph,source,k):
     visited = {}
@@ -566,12 +574,13 @@ class Dijkstra_AStar_Analysis:
     def __init__(self):
         self.stations = {}
         self.connections = []
+        self.lines = {}
 
         with open('london_stations.csv', newline='') as file1:
             reader1 = csv.reader(file1)
             next(reader1)
             for row in reader1:
-                self.stations[int(row[0])-1] = {
+                self.stations[int(row[0])] = {
                     "name": row[3],
                     "lat": float(row[1]),
                     "long": float(row[2]),
@@ -584,12 +593,22 @@ class Dijkstra_AStar_Analysis:
             reader2 = csv.reader(file2)
             next(reader2)
             for row in reader2:
+                s1, s2, line = int(row[0]), int(row[1]), int(row[2])
+
                 self.connections.append({
-                    "s1": int(row[0])-1,
-                    "s2": int(row[1])-1,
+                    "s1": s1,
+                    "s2": s2,
                     "line": row[2],
                     "time": row[3]
                 })
+                if s1 in self.lines:
+                    self.lines[s1][s2] = line
+                else:
+                    self.lines[s1] = { s2: line }
+                if s2 in self.lines:
+                    self.lines[s2][s1] = line
+                else:
+                    self.lines[s2] = { s1: line }
 
         self.distances = {}
         for sid1 in self.stations:
@@ -614,7 +633,7 @@ class Dijkstra_AStar_Analysis:
         return self.distances[s1][s2]
 
     def create_graph(self):
-        self.graph = WeightedGraph(len(self.stations)+1)
+        self.graph = WeightedGraph(len(self.stations)+2)
         for edge in self.connections:
             distance = self.heuristic(edge["s1"], edge["s2"])
             self.graph.add_edge(edge["s1"], edge["s2"], distance)
@@ -671,10 +690,10 @@ class Dijkstra_AStar_Analysis:
         plt.figure(figsize=(10, 5))
         x_axis = np.arange(num_bins)
         if len(dijkstra_speed) <= num_bins:
-            plt.xticks(x_axis, [str(i+1) for i in range(num_bins)])
+            plt.xticks(x_axis, [str(i) for i in range(num_bins)])
             plt.xlabel("Stations IDs")
         else:
-            plt.xticks(x_axis, [str((i*bin_size+1) + 1) + '-' + str(((i+1)*bin_size) + 1) for i in range(num_bins)])
+            plt.xticks(x_axis, [str((i*bin_size+1)) + '-' + str(((i+1)*bin_size)) for i in range(num_bins)])
             plt.xlabel("Group of Stations (IDs)")
 
         plt.bar(x_axis - 0.2, binned_dijkstra_speed, 0.4, color='#b33300', label='Dijkstra')
@@ -696,14 +715,14 @@ class Dijkstra_AStar_Analysis:
         # center station 192: Oxford Circus
 
         tests = [
-            [118 - 1, 88 - 1], # corner -> corner
-            [88 - 1, 118 - 1],
-            [88 - 1, 192 - 1], # corner -> center
-            [192 - 1, 88 - 1], # center -> corner
-            [149 - 1, 162 - 1], # adjacent
-            [162 - 1, 149 - 1],
-            [88 - 1, 153 - 1], # 10 stations away
-            [153 - 1, 88 - 1],
+            [118, 88], # corner -> corner
+            [88, 118],
+            [88, 192], # corner -> center
+            [192, 88], # center -> corner
+            [149, 162], # adjacent
+            [162, 149],
+            [88, 153], # 10 stations away
+            [153, 88],
         ]
         for test in tests:
             # test dijkstra
@@ -737,10 +756,89 @@ class Dijkstra_AStar_Analysis:
         plt.tight_layout()
         plt.legend()
         plt.show()
+    
+    def run_experiment3(self, length="short"):
+        # 1 is 1 line travelled, 2 is 2 lines travlled, 3 is 3+ lines travelled
+        dspeed_total = { 1: [], 2: [], 3: [] }
+        aspeed_total = { 1: [], 2: [], 3: [] }
+
+        station_ids = list(self.stations.keys())
+        station_ids.sort()
+
+        if length == "short":
+            station_ids = station_ids[:10]
+
+        # for every station, check the path to every other station
+        for s1 in station_ids:
+            print('s1: ', s1)
+            dspeed = { 1: [], 2: [], 3: [] }
+            aspeed = { 1: [], 2: [], 3: [] }
+
+            # test the time to find every other station from s1
+            for s2 in self.stations:
+                if s1 == s2:
+                    continue
+                # test dijkstra
+                start1 = timeit.default_timer()
+                path_d = dijkstra(self.graph, s1, s2)
+                stop1 = timeit.default_timer()
+
+                # check amount of lines taken
+                lines_visited_d = {}
+                for i in range(0, len(path_d)-1, 2):
+                    line = self.lines[path_d[i]][path_d[i+1]]
+                    if line not in lines_visited_d:
+                        lines_visited_d[line] = True
+                lines_d = len(lines_visited_d.keys())
+
+                # test astar
+                start2 = timeit.default_timer()
+                path_a = AStar(self.graph, s1, s2, self.heuristic)[1]
+                stop2 = timeit.default_timer()
+
+                # check amount of lines taken
+                lines_visited_a = {}
+                for i in range(0, len(path_a)-1, 2):
+                    line = self.lines[path_a[i]][path_a[i+1]]
+                    if line not in lines_visited_a:
+                        lines_visited_a[line] = True
+                lines_a = len(lines_visited_a.keys())
+
+                lines = min(lines_a, lines_d) # should be the same
+
+                if lines == 1 or lines == 2:
+                    dspeed[lines].append((stop1-start1)/1000)
+                    aspeed[lines].append((stop2-start2)/1000) 
+                else:
+                    dspeed[3].append((stop1-start1)/1000)
+                    aspeed[3].append((stop2-start2)/1000)
+            for i in range(1, 4):
+                dspeed_total[i] = sum(dspeed[i])
+                aspeed_total[i] = sum(aspeed[i])
+
+        # configure and display the plot
+        plt.figure(figsize=(10, 8))
+        x_axis = np.arange(len(dspeed))
+        plt.xticks(x_axis, [
+            "1 Line",
+            "2 Lines",
+            "3+ Lines"
+        ], rotation=45)
+        plt.xlabel("Amount of Lines Travelled on the Shortest Path")
+
+        plt.bar(x_axis - 0.2, [sum(dspeed[i])/len(dspeed[i]) for i in range(1, 4)], 0.4, color='#b33300', label='Dijkstra')
+        plt.bar(x_axis + 0.2, [sum(aspeed[i])/len(aspeed[i]) for i in range(1, 4)], 0.4, color='#8bc1c7', label='A*')
+
+        plt.title("Time comparison for Dijkstra vs A* on the London Subway")
+        plt.ylabel("Time (ms)")
+        plt.tight_layout()
+        plt.legend()
+        plt.show()
 
 
 london_subway = Dijkstra_AStar_Analysis()
 london_subway.create_graph()
-# london_subway.run_experiments("short")
-london_subway.run_experiment2()
+# london_subway.run_experiment1()
+# london_subway.run_experiment2()
+# london_subway.run_experiment3()
 
