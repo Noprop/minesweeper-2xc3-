@@ -502,6 +502,8 @@ def experiment3():
 
 # experiment3()
 
+# Part 3
+
 def all_pair_positive(Graph : WeightedGraph):
     size = Graph.get_number_of_nodes()
     nodes = [i for i in range(0,size)]
