@@ -290,3 +290,68 @@ class Item:
         return "(" + str(self.key) + "," + str(self.value) + ")"
 
 
+def heuristic(n: int) -> int:
+    # hardcoded
+    heuristic_dict = {
+        0: 0.0,
+        1: 1.0,
+        2: -15.0,
+        3: 3.0,
+        4: -16.0,
+        5: 5.0,
+        6: 6.0,
+        7: 7.0,
+    }
+    return heuristic_dict[n]
+
+def AStar(g: WeightedGraph, source: int, goal: int, h: callable):
+    n = g.get_number_of_nodes()
+
+    # init our pq, and add source to it
+    Q = MinHeap([])
+    Q.insert(Item(source, 0))
+
+    # we use this to backtrack and calculate the path
+    prev = {}
+    # this is the score not including the heuristic value
+    gScore = {}
+    # this is the score including the heuristic
+    # this is what determines which node to check next
+    fScore = {}
+    for i in range(n):
+        prev[i] = None
+        gScore[i] = float('inf')
+        fScore[i] = float('inf')
+
+    prev[source] = source
+    gScore[source] = 0
+    fScore[source] = h(source)
+
+    while not Q.is_empty():
+        current = Q.extract_min().value
+        if current == goal:
+            return  (prev, get_path(goal, source, prev))
+        
+        for nb in g.get_neighbors(current):
+            temp_gScore = gScore[current] + g.get_weights(current, nb)
+            if temp_gScore < gScore[nb]:
+                prev[nb] = current
+                gScore[nb] = temp_gScore
+                fScore[nb] = temp_gScore + h(nb)
+                if Q.contains(nb):
+                    Q.decrease_key(nb, fScore[nb])
+                else:
+                    Q.insert(Item(nb, fScore[nb]))
+    return None
+    
+def get_path(start, end, pred):
+    path = [start]
+    node = start
+    while node != end:
+        node = pred[node]
+        path.append(node)
+    path.reverse()
+    return path
+
+print(AStar(static_graph_positive, 1, 2, heuristic))
+static_graph_positive.display_graph()
