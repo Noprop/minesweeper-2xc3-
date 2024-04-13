@@ -723,7 +723,8 @@ class Dijkstra_AStar_Analysis:
         station_ids.sort()
 
         if length == "short":
-            station_ids = station_ids[:12]
+            station_ids = station_ids[:5]
+        station_ids = station_ids[1:]
 
         # for every station, check the path to every other station
         for s1 in station_ids:
@@ -759,24 +760,27 @@ class Dijkstra_AStar_Analysis:
         bin_size = len(dijkstra_speed) // num_bins
 
         # sum the items 1-20, 21-40, 41-60, etc.
-        binned_dijkstra_speed = [sum(dijkstra_speed[i*bin_size:(i+1)*bin_size]) for i in range(num_bins)]
-        binned_astar_speed = [sum(astar_speed[i*bin_size:(i+1)*bin_size]) for i in range(num_bins)]
+        binned_dijkstra_speed = [sum(dijkstra_speed[i*bin_size:(i+1)*bin_size])/bin_size for i in range(num_bins)]
+        binned_astar_speed = [sum(astar_speed[i*bin_size:(i+1)*bin_size])/bin_size for i in range(num_bins)]
 
         # configure and display the plot
         plt.figure(figsize=(10, 5))
         x_axis = np.arange(num_bins)
+
         if len(dijkstra_speed) <= num_bins:
             plt.xticks(x_axis, [str(i) for i in range(num_bins)])
             plt.xlabel("Stations IDs")
         else:
-            plt.xticks(x_axis, [str((i*bin_size+1)) + '-' + str(((i+1)*bin_size)) for i in range(num_bins)])
+            plt.xticks(x_axis, [str((i * bin_size + 1)) + '-' + str(((i + 1) * bin_size)) for i in range(num_bins)])
             plt.xlabel("Group of Stations (IDs)")
 
-        plt.bar(x_axis - 0.2, binned_dijkstra_speed, 0.4, color='#b33300', label='Dijkstra')
-        plt.bar(x_axis + 0.2, binned_astar_speed, 0.4, color='#8bc1c7', label='A*')
+        # Plotting lines with markers
+        plt.plot(x_axis, binned_dijkstra_speed, marker='o', linestyle='-', color='#b33300', label='Dijkstra', linewidth=2)
+        plt.plot(x_axis, binned_astar_speed, marker='s', linestyle='-', color='#8bc1c7', label='A*', linewidth=2)
 
         plt.title("Time comparison for Dijkstra vs A* on the London Subway")
-        plt.ylabel("Time (s)")
+        plt.ylabel("Time (s) per Station")
+        plt.ylim(0, 1)  # Set y-axis from 0 to 1 second
         plt.legend()
         plt.show()
 
@@ -842,7 +846,7 @@ class Dijkstra_AStar_Analysis:
         station_ids.sort()
 
         if length == "short":
-            station_ids = station_ids[:10]
+            station_ids = station_ids[:12]
 
         # for every station, check the path to every other station
         for s1 in station_ids:
@@ -896,9 +900,9 @@ class Dijkstra_AStar_Analysis:
         plt.figure(figsize=(10, 8))
         x_axis = np.arange(len(dspeed))
         plt.xticks(x_axis, [
-            "1 Line",
-            "2 Lines",
-            "3+ Lines"
+            "1 Line (" + str(len(dspeed[1])) + " instances)",
+            "2 Lines (" + str(len(dspeed[2])) + " instances)",
+            "3+ Lines (" + str(len(dspeed[3])) + " instances)"
         ], rotation=45)
         plt.xlabel("Amount of Lines Travelled on the Shortest Path")
 
@@ -914,7 +918,7 @@ class Dijkstra_AStar_Analysis:
 
 london_subway = Dijkstra_AStar_Analysis()
 london_subway.create_graph()
-# london_subway.run_experiment1()
+# london_subway.run_experiment1("long!")
 # london_subway.run_experiment2()
-# london_subway.run_experiment3()
+# london_subway.run_experiment3("long!")
 
